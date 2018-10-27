@@ -6,12 +6,19 @@ Created on Thu Oct 18 19:18:02 2018
 @author: gershow
 """
 import numpy as np
+import math
 import matplotlib.pyplot as plt
 
 tank1Color = 'b'
 tank2Color = 'r'
 obstacleColor = 'k'
 
+x0 = 1.0
+y0 = 1.0
+
+    #tank1box = [10,15,0,5]
+    #tank2box = [90,95,0,5]
+    #obstacleBox = [40,60,0,50]
 ##### functions you need to implement #####
 def trajectory (x0,y0,v,theta,g = 9.8, npts = 1000):
     """
@@ -44,7 +51,18 @@ def trajectory (x0,y0,v,theta,g = 9.8, npts = 1000):
     0.5g t^2 - vsin(theta) t - y0 = 0
     t_final = v/g sin(theta) + sqrt((v/g)^2 sin^2(theta) + 2 y0/g)
     """
-  
+    arad = math.radians(theta)
+    t_final = ((v/g)*math.sin(arad)+np.sqrt(((v/g)**2)*((math.sin(arad)**2)+(2*y0/g))))
+    t = np.linspace(0,t_final,npts)
+    vx = v*math.cos(arad)
+    vy = v*math.sin(arad)
+    y = y0+(vy*t)-(.5*g*(t**2))
+    x = x0+vx*t
+    return(x,y)
+(x,y) = trajectory (x0,y0,v,theta,g = 9.8, npts = 1000)
+plt.figure(1)
+plt.clf()
+plt.plot(x,y)
 
 def firstInBox (x,y,box):
     """
@@ -65,8 +83,34 @@ def firstInBox (x,y,box):
         y[j] is in [bottom,top]
         -1 if the line x,y does not go through the box
     """
+    for j in range(0,len(x)):
+        if box[0]<j<box[1] and box[2]<j<box[3]:
+            return(j)
+        else:
+            return(-1)
 
-
+def endTrajectoryAtIntersection (x,y,box):
+    """
+    portion of trajectory prior to first intersection with box
+    
+    paramaters
+    ----------
+    x,y : np array type
+        position to check
+    box : tuple
+        (left,right,bottom,top)
+    
+    returns
+    ----------
+    (x,y) : tuple of np.array of floats
+        equal to inputs if (x,y) does not intersect box
+        otherwise returns the initial portion of the trajectory
+        up until the point of intersection with the box
+    """
+    i = firstInBox(x,y,box)
+    if (i < 0):
+        return (x,y)
+    return (x[0:i],y[0:i])
     
 
 def tankShot (targetBox, obstacleBox, x0, y0, v, theta, g = 9.8):
@@ -96,6 +140,14 @@ def tankShot (targetBox, obstacleBox, x0, y0, v, theta, g = 9.8):
     obstacle box
     draws the truncated trajectory in current plot window
     """
+    (x,y) = trajectory (x0,y0,v,theta,g = 9.8)
+    (x,y) = endTrajectoryAtIntersection (x,y,obstacleBox)
+    plt.plot(x,y)
+    if firstInBox(x,y,targetBox) <= 0:
+        hit = 0
+    else:
+        hit = 1 
+    return(hit)
     
 
 
@@ -113,7 +165,12 @@ def drawBoard (tank1box, tank2box, obstacleBox, playerNum):
     playerNum : int
         1 or 2 -- who's turn it is to shoot
  
-    """    
+    """   
+    drawBox(tank1box, tank1Color)
+    drawBox(tank2box,tank2Color)
+    drawBox(obstacleBox,obstacleColor)
+    plt.xlim(0,100)
+    plt.ylim(0,100)
     #your code here
     
     showWindow() #this makes the figure window show up
@@ -143,8 +200,22 @@ def oneTurn (tank1box, tank2box, obstacleBox, playerNum, g = 9.8):
     displays trajectory (shot originates from center of tank)
     returns 0 for miss, 1 or 2 for victory
     """        
-
-    
+    v = getNumberInput('enter a velocity => ')
+    theta = getNumberInput('enter an angle=>')
+    if playerNum == 1:
+        x0 = np.average([tank1box[0],tank1box[1]])
+        y0 = np.average([tank1box[2],tank1box[3]])
+        targetBox = tank2box
+    else:
+        x0 = np.average([tank2box[0],tank2box[1]])
+        y0 = np.average([tank2box[2],tank2box[3]])
+        targetBox = tank1box
+        
+    hit = tankShot (targetBox, obstacleBox, x0, y0, v, theta, g=9.8)  
+    if hit == 1:
+        return(playerNum)
+    else:
+        return(0)
 
 def playGame(tank1box, tank2box, obstacleBox, g = 9.8):
     """
@@ -161,7 +232,18 @@ def playGame(tank1box, tank2box, obstacleBox, g = 9.8):
      g : float 
         accel due to gravity (default 9.8)
     """
+    playerNum = 1
+    win = oneTurn(tank1box, tank2box, obstacleBox, playerNum, g = 9.8)
     
+    while win != 1:
+        print('big miss my dude')
+        input('hit enter to continue =>')
+        playerNum = 3-playerNum
+        main()
+        if win ==1:
+            print(playerNum + 'wins b')
+            break
+        
     
         
 ##### functions provided to you #####
